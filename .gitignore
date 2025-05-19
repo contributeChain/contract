@@ -17,4 +17,4 @@ docs/
 zkout/
 
 # Libs
-lib/
+lib/*
