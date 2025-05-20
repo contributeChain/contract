@@ -132,6 +132,119 @@ bool canEdit = groveACLOracle.isAuthorized(
 - Action selectors (EDIT, DELETE) provide extensibility for future permission types
 - Zero-address checks prevent common errors in permission management
 
+## ContributorNFT
+
+**ContributorNFT** is an ERC721 token contract designed to recognize and reward GitHub contributors with unique NFTs that reflect their contributions. Each NFT includes metadata about the contribution, repository, and a rarity grade based on the contribution's significance.
+
+### Purpose
+
+The ContributorNFT contract provides an on-chain mechanism to:
+
+1. Recognize valuable contributions to GitHub repositories
+2. Assign value to contributors through tokenized assets
+3. Establish a verifiable record of contribution history
+4. Create collectible NFTs with rarity tiers that reflect contribution significance
+
+### Architecture
+
+```
+┌───────────────────────────────────────────────────────────────────────┐
+│                                                                       │
+│                            GitHub Project                             │
+│                                                                       │
+└──────────────────────────────┬────────────────────────────────────────┘
+                               │
+                               │ Contribution
+                               │ Analysis
+                               ▼
+┌───────────────────────────────────────────────────────────────────────┐
+│                                                                       │
+│                       ContributorNFT Contract                         │
+│                                                                       │
+│  ┌───────────────────┐        ┌─────────────────────────────┐         │
+│  │   Contribution    │        │         Token URI           │         │
+│  │     Scoring       │───────►│      (IPFS/Grove URI)       │         │
+│  └───────────────────┘        └─────────────────────────────┘         │
+│           │                                                           │
+│           │                                                           │
+│           ▼                                                           │
+│  ┌───────────────────┐        ┌─────────────────────────────┐         │
+│  │      Rarity       │        │         Contributor         │         │
+│  │   Determination   │────────┤           Reward            │         │
+│  └───────────────────┘        └─────────────────────────────┘         │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Features
+
+- **Contribution Tracking**: Associate NFTs with specific GitHub repositories
+- **Rarity Tiers**: Five levels from Common to Legendary based on contribution score
+- **Metadata Storage**: Store contribution details on-chain with NFT metadata
+- **Repository Indexing**: Quickly retrieve all NFTs minted for a specific repository
+- **Contribution Scoring**: Value contributions based on impact and complexity
+
+### Contract Functions
+
+#### Minting and Metadata
+
+- `mintContribution(address to, string memory repositoryUrl, uint256 contributionScore, string memory tokenURI)`: Mint a new contribution NFT
+- `getTokenMetadata(uint256 tokenId)`: Retrieve full metadata for a specific token
+- `determineRarity(uint256 score)`: Calculate rarity tier based on contribution score
+- `getRarityName(Rarity rarity)`: Convert rarity enum to human-readable string
+
+#### Repository and Token Management
+
+- `getRepositoryTokens(string memory repositoryUrl)`: Get all tokens associated with a repository
+- `totalSupply()`: Get total number of minted NFTs
+
+### Rarity System
+
+ContributorNFT implements a 5-tier rarity system:
+
+| Rarity Level | Contribution Score | Description |
+|--------------|-------------------|-------------|
+| Common       | 0-49              | Minor contributions like typo fixes |
+| Uncommon     | 50-199            | Small improvements or documentation |
+| Rare         | 200-499           | Feature implementations or bug fixes |
+| Epic         | 500-999           | Major feature development |
+| Legendary    | 1000+             | Critical contributions with project-wide impact |
+
+### Events
+
+- `ContributionNFTMinted`: Emitted when a new NFT is minted, including token ID, contributor, repository, rarity, and score
+
+### Integration Example
+
+```solidity
+// 1. Mint an NFT for a valuable contribution
+uint256 tokenId = contributorNFT.mintContribution(
+    contributorAddress,
+    "github.com/owner/repository",
+    650,  // Epic rarity (score 500-999)
+    "ipfs://QmYourTokenMetadataHash"
+);
+
+// 2. Retrieve all tokens for a repository
+uint256[] memory tokens = contributorNFT.getRepositoryTokens("github.com/owner/repository");
+
+// 3. Get metadata for a specific token
+(
+    string memory repoUrl,
+    address contributor,
+    string memory rarityName,
+    uint256 score,
+    uint256 timestamp
+) = contributorNFT.getTokenMetadata(tokenId);
+```
+
+### Security Considerations
+
+- The contract includes access control for admin functions
+- Custom errors provide clear information about failed operations
+- Non-existent token checks prevent unauthorized operations
+- Repository URLs cannot be empty, ensuring proper indexing
+
 ## Usage
 
 ### Build
@@ -158,7 +271,92 @@ $ forge fmt
 $ forge snapshot
 ```
 
-### Anvil
+## Deploying on Lens Chain
+
+This project supports deployment on Lens Chain using Foundry ZKSync. Follow these steps to deploy the GroveACLOracle contract:
+
+### Prerequisites
+
+1. **Install Foundry ZKSync**:
+   ```shell
+   git clone git@github.com:matter-labs/foundry-zksync.git
+   cd foundry-zksync
+   ./install-foundry-zksync
+   ```
+
+2. **Configure foundry.toml**:
+   Ensure your `foundry.toml` contains the ZKSync profile:
+   ```toml
+   [profile.zksync]
+   src = 'src'
+   libs = ['lib']
+   solc-version = "0.8.24"
+   fallback_oz = true
+   is_system = false
+   mode = "3"
+   remappings = [
+       "@openzeppelin/=lib/openzeppelin-contracts/"
+   ]
+   ```
+
+3. **Set up deployment wallet**:
+   ```shell
+   FOUNDRY_PROFILE=zksync cast wallet import myKeystore --interactive
+   ```
+   You'll be prompted to enter your private key and a password.
+
+4. **Get $GRASS tokens**:
+   For Lens Chain Sepolia Testnet deployments, obtain $GRASS tokens from a faucet.
+
+### Compiling
+
+Compile the contracts for Lens Chain:
+
+```shell
+FOUNDRY_PROFILE=zksync forge build --zksync
+```
+
+### Deployment
+
+Deploy the GroveACLOracle contract:
+
+```shell
+FOUNDRY_PROFILE=zksync forge create src/GroveACLOracle.sol:GroveACLOracle \
+  --account myKeystore \
+  --rpc-url https://rpc.testnet.lens.xyz \
+  --chain 37111 \
+  --zksync
+```
+
+Deploy the ContributorNFT contract:
+
+```shell
+FOUNDRY_PROFILE=zksync forge create src/ContributeNft.sol:ContributorNFT \
+  --account myKeystore \
+  --rpc-url https://rpc.testnet.lens.xyz \
+  --chain 37111 \
+  --zksync
+```
+
+### Troubleshooting
+
+**Insufficient Funds Error**:
+```
+Error: server returned an error response: error code 3: insufficient funds for gas + value
+```
+
+This indicates your wallet needs more $GRASS tokens. Check your balance with:
+```shell
+cast balance YOUR_ADDRESS --rpc-url https://rpc.testnet.lens.xyz
+```
+
+**Keystore Issues**:
+If you encounter keystore errors, verify it exists with:
+```shell
+cast wallet list
+```
+
+## Anvil
 
 ```shell
 $ anvil
