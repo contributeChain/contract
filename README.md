@@ -136,6 +136,11 @@ bool canEdit = groveACLOracle.isAuthorized(
 
 **ContributorNFT** is an ERC721 token contract designed to recognize and reward GitHub contributors with unique NFTs that reflect their contributions. Each NFT includes metadata about the contribution, repository, and a rarity grade based on the contribution's significance.
 
+### Deployed Contracts
+
+- **Mainnet**: [0xEA03fAF9Ade0c1cB5E4fEB5b1316f039b385f39B](https://explorer.lens.xyz/address/0xEA03fAF9Ade0c1cB5E4fEB5b1316f039b385f39B#contract)
+- **Testnet**: 0x31F8fC3Bcada00d64ce6bB3D4D22d9814530feD8
+
 ### Purpose
 
 The ContributorNFT contract provides an on-chain mechanism to:
